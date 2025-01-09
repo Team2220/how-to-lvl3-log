@@ -6,20 +6,30 @@ package frc.robot;
 
 import static edu.wpi.first.units.Units.Radians;
 import static edu.wpi.first.units.Units.RadiansPerSecond;
+import static edu.wpi.first.units.Units.Seconds;
+import static edu.wpi.first.units.Units.Volts;
 
+import org.littletonrobotics.junction.Logger;
+
+import edu.wpi.first.math.estimator.DifferentialDrivePoseEstimator;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.DifferentialDriveKinematics;
-import edu.wpi.first.math.kinematics.DifferentialDriveOdometry;
 import edu.wpi.first.math.kinematics.DifferentialDriveWheelPositions;
 import edu.wpi.first.math.kinematics.DifferentialDriveWheelSpeeds;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 /** Represents a differential drive style drivetrain. */
-public class Drivetrain {
+public class Drivetrain extends SubsystemBase {
   public static final double kMaxSpeed = 3.0; // meters per second
   public static final double kMaxAngularSpeed = 2 * Math.PI; // one rotation per second
 
   private static final double kTrackWidth = 0.381 * 2; // meters
   private static final double kWheelRadius = 0.0508; // meters
+
+  private static final Pose2d kInitialPose = new Pose2d(0, 0, Rotation2d.fromDegrees(0));
 
   // IO interfaces
   private final DriveSideIO leftDriveIO;
@@ -33,7 +43,12 @@ public class Drivetrain {
 
   private final DifferentialDriveKinematics m_kinematics = new DifferentialDriveKinematics(kTrackWidth);
 
-  private final DifferentialDriveOdometry m_odometry;
+  private final DifferentialDrivePoseEstimator poseEstimator = new DifferentialDrivePoseEstimator(
+      m_kinematics, Rotation2d.kZero, 0, 0, kInitialPose);
+
+  private Rotation2d rawGyroRotation = Rotation2d.kZero;
+
+  private DifferentialDriveWheelPositions lastWheelPositions = new DifferentialDriveWheelPositions(0, 0);
 
   /**
    * Constructs a differential drive object. Sets the encoder distance per pulse
@@ -53,8 +68,7 @@ public class Drivetrain {
 
     var wheelPositions = getDifferentialDrivePositions();
 
-    m_odometry = new DifferentialDriveOdometry(
-        gyroIOInputs.yawPosition, wheelPositions.leftMeters, wheelPositions.rightMeters);
+    poseEstimator.updateWithTime(0, rawGyroRotation, wheelPositions.leftMeters, wheelPositions.rightMeters);
   }
 
   /**
@@ -86,10 +100,50 @@ public class Drivetrain {
     return new DifferentialDriveWheelPositions(leftPositionMeters, rightPositionMeters);
   }
 
-  /** Updates the field-relative position. */
-  public void updateOdometry() {
-    var wheelPositions = getDifferentialDrivePositions();
-    m_odometry.update(
-        gyroIOInputs.yawPosition, wheelPositions.leftMeters, wheelPositions.rightMeters);
+  @Override
+  public void periodic() {
+    // Update the hardware IO inputs every period
+    leftDriveIO.updateInputs(leftDriveIOInputs);
+    rightDriveIO.updateInputs(rightDriveIOInputs);
+    gyroIO.updateInputs(gyroIOInputs);
+
+    // This logs the inputs during REAL or SIM mode, or replays them if in REPLAY
+    // mode
+    Logger.processInputs("Drivetrain/LeftDrive", leftDriveIOInputs);
+    Logger.processInputs("Drivetrain/RightDrive", rightDriveIOInputs);
+    Logger.processInputs("Drivetrain/Gyro", gyroIOInputs);
+
+    // Stop the robot if disabled
+    if (DriverStation.isDisabled()) {
+      leftDriveIO.setDriveOpenLoop(Volts.of(0));
+      rightDriveIO.setDriveOpenLoop(Volts.of(0));
+    }
+
+    // Update odometry, all signals are sampled together
+    var sampleTimestamps = leftDriveIOInputs.odometryTimestamps;
+    int sampleCount = sampleTimestamps.length;
+    for (int i = 0; i < sampleCount; i++) {
+      // The simulator abstraction for the gyro is tightly coupled to the Drivetrain
+      // subsytem, so it cannot be implemented in its own class, it must be here
+      var wheelPositions = getDifferentialDrivePositions();
+      if (gyroIOInputs.connected) {
+        // Real gyro rotation
+        rawGyroRotation = gyroIOInputs.yawPosition;
+      } else {
+        // Simulated gyro rotation
+        rawGyroRotation = rawGyroRotation
+            .plus(Rotation2d.fromRadians(m_kinematics.toTwist2d(lastWheelPositions, wheelPositions).dtheta));
+      }
+
+      // update last wheel positions for delta
+      lastWheelPositions = wheelPositions;
+
+      // update pose estimator
+      poseEstimator.updateWithTime(sampleTimestamps[i].in(Seconds), rawGyroRotation, lastWheelPositions.leftMeters,
+          lastWheelPositions.rightMeters);
+    }
+
+    // Log the robot pose
+    Logger.recordOutput("Robot Pose", poseEstimator.getEstimatedPosition());
   }
 }

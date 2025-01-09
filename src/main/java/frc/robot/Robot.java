@@ -13,11 +13,13 @@ import org.littletonrobotics.junction.wpilog.WPILOGWriter;
 import org.littletonrobotics.urcl.URCL;
 
 import edu.wpi.first.math.filter.SlewRateLimiter;
+import edu.wpi.first.wpilibj.Threads;
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj2.command.CommandScheduler;
 
 public class Robot extends LoggedRobot {
   private final XboxController m_controller = new XboxController(0);
-  private final Drivetrain m_drive = new Drivetrain();
+  private final Drivetrain m_drive;
 
   // Slew rate limiters to make joystick inputs more gentle; 1/3 sec from 0 to 1.
   private final SlewRateLimiter m_speedLimiter = new SlewRateLimiter(3);
@@ -72,12 +74,57 @@ public class Robot extends LoggedRobot {
 
     // Start AdvantageKit logger
     Logger.start();
+
+    switch (Constants.currentMode) {
+      case REAL:
+        // Real robot, instantiate hardware IO implementations
+        m_drive = new Drivetrain(
+            new DriveSideIOSparkMax(true),
+            new DriveSideIOSparkMax(false),
+            new GyroIOAnalog());
+
+        break;
+
+      case SIM:
+        // Sim robot, instantiate physics sim IO implementations
+        m_drive = new Drivetrain(
+            new DriveSideIOSim(),
+            new DriveSideIOSim(),
+            new GyroIO() {
+            });
+        break;
+
+      default:
+        // Replayed robot, disable IO implementations
+        m_drive = new Drivetrain(
+            new DriveSideIOSim(),
+            new DriveSideIOSim(),
+            new GyroIO() {
+            });
+        break;
+    }
+  }
+
+  /** This function is called periodically during all modes. */
+  @Override
+  public void robotPeriodic() {
+    // Switch thread to high priority to improve loop timing
+    Threads.setCurrentThreadPriority(true, 99);
+
+    // Runs the Scheduler. This is responsible for polling buttons, adding
+    // newly-scheduled commands, running already-scheduled commands, removing
+    // finished or interrupted commands, and running subsystem periodic() methods.
+    // This must be called from the robot's periodic block in order for anything in
+    // the Command-based framework to work.
+    CommandScheduler.getInstance().run();
+
+    // Return to normal thread priority
+    Threads.setCurrentThreadPriority(false, 10);
   }
 
   @Override
   public void autonomousPeriodic() {
     teleopPeriodic();
-    m_drive.updateOdometry();
   }
 
   @Override
