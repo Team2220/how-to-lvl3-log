@@ -11,6 +11,7 @@ import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.PowerDistribution;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.motorcontrol.PWMSparkMax;
 
 public class DriveSideIOSparkMax implements DriveSideIO {
@@ -75,6 +76,11 @@ public class DriveSideIOSparkMax implements DriveSideIO {
         inputs.velocity = RadiansPerSecond.of(encoder.getRate());
         inputs.appliedVolts = Volts.of(leader.getVoltage());
         inputs.current = Amps.of(pdp.getCurrent(isLeft ? kLeftLeaderChannel : kRightLeaderChannel));
+
+        // Update odometry inputs (50Hz because high-frequency odometry in sim doesn't
+        // matter)
+        inputs.odometryTimestampsSec = new double[] { Timer.getFPGATimestamp() };
+        inputs.odometryPositionsRad = new double[] { inputs.position.in(Radians) };
     }
 
     @Override

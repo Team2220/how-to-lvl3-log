@@ -10,7 +10,6 @@ import org.littletonrobotics.junction.AutoLog;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Current;
-import edu.wpi.first.units.measure.Time;
 import edu.wpi.first.units.measure.Voltage;
 
 public interface DriveSideIO {
@@ -23,8 +22,8 @@ public interface DriveSideIO {
         public Voltage appliedVolts = Volts.of(0.0);
         public Current current = Amps.of(0.0);
 
-        public Time[] odometryTimestamps = new Time[] {};
-        public Angle[] odometryPositions = new Angle[] {};
+        public double[] odometryTimestampsSec = new double[] {};
+        public double[] odometryPositionsRad = new double[] {};
     }
 
     /** Updates the set of loggable inputs. */

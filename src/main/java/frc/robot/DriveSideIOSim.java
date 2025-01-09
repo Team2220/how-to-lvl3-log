@@ -1,17 +1,15 @@
 package frc.robot;
 
 import static edu.wpi.first.units.Units.Amps;
+import static edu.wpi.first.units.Units.Radians;
 import static edu.wpi.first.units.Units.RadiansPerSecond;
-import static edu.wpi.first.units.Units.Seconds;
 import static edu.wpi.first.units.Units.Volts;
 
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
-import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
-import edu.wpi.first.units.measure.Time;
 import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
@@ -60,8 +58,8 @@ public class DriveSideIOSim implements DriveSideIO {
 
         // Update odometry inputs (50Hz because high-frequency odometry in sim doesn't
         // matter)
-        inputs.odometryTimestamps = new Time[] { Seconds.of(Timer.getFPGATimestamp()) };
-        inputs.odometryPositions = new Angle[] { inputs.position };
+        inputs.odometryTimestampsSec = new double[] { Timer.getFPGATimestamp() };
+        inputs.odometryPositionsRad = new double[] { inputs.position.in(Radians) };
     }
 
     @Override

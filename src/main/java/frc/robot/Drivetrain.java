@@ -6,7 +6,6 @@ package frc.robot;
 
 import static edu.wpi.first.units.Units.Radians;
 import static edu.wpi.first.units.Units.RadiansPerSecond;
-import static edu.wpi.first.units.Units.Seconds;
 import static edu.wpi.first.units.Units.Volts;
 
 import org.littletonrobotics.junction.Logger;
@@ -120,7 +119,7 @@ public class Drivetrain extends SubsystemBase {
     }
 
     // Update odometry, all signals are sampled together
-    var sampleTimestamps = leftDriveIOInputs.odometryTimestamps;
+    var sampleTimestamps = leftDriveIOInputs.odometryTimestampsSec;
     int sampleCount = sampleTimestamps.length;
     for (int i = 0; i < sampleCount; i++) {
       // The simulator abstraction for the gyro is tightly coupled to the Drivetrain
@@ -139,7 +138,7 @@ public class Drivetrain extends SubsystemBase {
       lastWheelPositions = wheelPositions;
 
       // update pose estimator
-      poseEstimator.updateWithTime(sampleTimestamps[i].in(Seconds), rawGyroRotation, lastWheelPositions.leftMeters,
+      poseEstimator.updateWithTime(sampleTimestamps[i], rawGyroRotation, lastWheelPositions.leftMeters,
           lastWheelPositions.rightMeters);
     }
 
