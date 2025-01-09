@@ -28,7 +28,7 @@ public class Drivetrain extends SubsystemBase {
   private static final double kTrackWidth = 0.381 * 2; // meters
   private static final double kWheelRadius = 0.0508; // meters
 
-  private static final Pose2d kInitialPose = new Pose2d(0, 0, Rotation2d.fromDegrees(0));
+  private static final Pose2d kInitialPose = new Pose2d(2, 6, Rotation2d.fromDegrees(0));
 
   // IO interfaces
   private final DriveSideIO leftDriveIO;

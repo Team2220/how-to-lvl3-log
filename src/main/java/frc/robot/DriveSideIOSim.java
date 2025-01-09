@@ -5,6 +5,9 @@ import static edu.wpi.first.units.Units.Radians;
 import static edu.wpi.first.units.Units.RadiansPerSecond;
 import static edu.wpi.first.units.Units.Volts;
 
+import org.littletonrobotics.junction.Logger;
+
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.system.plant.DCMotor;
@@ -21,7 +24,7 @@ public class DriveSideIOSim implements DriveSideIO {
 
     // roughly calculated moment of inertia for a square differential drive, no
     // mechanisms, bumpers; just drivetrain and battery (~45 lbs)
-    private static final double kMomentOfInertia = 1.0;
+    private static final double kMomentOfInertia = 0.5;
     private static final DCMotor kGearbox = DCMotor.getNEO(2);
 
     // simulator only needs to simulate a single motor since the gearbox defines 2
@@ -35,6 +38,12 @@ public class DriveSideIOSim implements DriveSideIO {
     private Voltage driveAppliedVoltage = Volts.of(0);
     private Voltage driveFFVoltage = Volts.of(0);
 
+    private boolean isLeft;
+
+    public DriveSideIOSim(boolean isLeft) {
+        this.isLeft = isLeft;
+    }
+
     @Override
     public void updateInputs(DriveSideIOInputs inputs) {
         if (driveClosedLoop) {
@@ -44,7 +53,7 @@ public class DriveSideIOSim implements DriveSideIO {
             pidController.reset();
         }
 
-        motor.setInputVoltage(driveAppliedVoltage.in(Volts));
+        motor.setInputVoltage(MathUtil.clamp(driveAppliedVoltage.in(Volts), -12, 12));
 
         // You should pass in a real delta time value since this varies slightly
         motor.update(0.02);
@@ -73,6 +82,8 @@ public class DriveSideIOSim implements DriveSideIO {
         driveClosedLoop = true;
         var radsPerSec = velocity.in(RadiansPerSecond);
         driveFFVoltage = Volts.of(feedforward.calculate(radsPerSec));
+        Logger.recordOutput((isLeft ? "Left" : "Right") + " Drive FF V", driveFFVoltage);
+        Logger.recordOutput((isLeft ? "Left" : "Right") + " Setpoint", velocity);
         pidController.setSetpoint(radsPerSec);
     }
 }

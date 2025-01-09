@@ -88,8 +88,8 @@ public class Robot extends LoggedRobot {
       case SIM:
         // Sim robot, instantiate physics sim IO implementations
         m_drive = new Drivetrain(
-            new DriveSideIOSim(),
-            new DriveSideIOSim(),
+            new DriveSideIOSim(true),
+            new DriveSideIOSim(false),
             new GyroIO() {
             });
         break;
@@ -97,8 +97,8 @@ public class Robot extends LoggedRobot {
       default:
         // Replayed robot, disable IO implementations
         m_drive = new Drivetrain(
-            new DriveSideIOSim(),
-            new DriveSideIOSim(),
+            new DriveSideIOSim(true),
+            new DriveSideIOSim(false),
             new GyroIO() {
             });
         break;
